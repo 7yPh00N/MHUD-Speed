@@ -3,7 +3,7 @@
 #include <hamsandwich>
 
 #define PLUGIN_NAME "MHUD Speed"
-#define PLUGIN_VERSION "1.0.0"
+#define PLUGIN_VERSION "1.0.1"
 #define PLUGIN_AUTHOR "7yPh00N"
 
 new const MENU_SPEED[] = "SpeedMenu"
@@ -17,6 +17,7 @@ new g_SpeedColorUnchanged[33][3]
 new Float:g_PrevHorizontalSpeed[33]
 new Float:g_TakeoffHorizontalSpeed[33]
 new Float:g_TakeoffZ[33]
+new Float:g_TakeoffWeaponSpeed[33]
 new bool:g_InPrediction[33]
 new bool:g_JumpFirstFrame[33]
 
@@ -110,8 +111,11 @@ public client_PreThink(id)
     
     if (((buttons & IN_JUMP && !(oldbuttons & IN_JUMP)) || (buttons & IN_DUCK && !(oldbuttons & IN_DUCK))) && onground)
     {
+        new Float:weaponSpeed
+        pev(id, pev_maxspeed, weaponSpeed)
         g_TakeoffHorizontalSpeed[id] = horiz
         g_TakeoffZ[id] = origin[2]
+        g_TakeoffWeaponSpeed[id] = weaponSpeed
         g_InPrediction[id] = true
         g_JumpFirstFrame[id] = true
     }
@@ -153,11 +157,19 @@ public client_PreThink(id)
     new bool:shouldHideParen = (origin[2] <= g_TakeoffZ[id] - 18.0) || onground
     if (g_InPrediction[id] && !g_JumpFirstFrame[id] && !shouldHideParen)
     {
-        new Float:gain = horiz - g_TakeoffHorizontalSpeed[id]
+        new Float:displayTakeoffSpeed = g_TakeoffHorizontalSpeed[id]
+        new Float:threshold = floatsqroot((g_TakeoffWeaponSpeed[id] * 1.2) * (g_TakeoffWeaponSpeed[id] * 1.2) - 4.0 * 4.0)
+        
+        if (g_TakeoffHorizontalSpeed[id] > threshold)
+        {
+            displayTakeoffSpeed = threshold * 0.8
+        }
+        
+        new Float:gain = horiz - displayTakeoffSpeed
         if (gain >= 0.0)
-            formatex(speed_text, charsmax(speed_text), "%.2f^n(%.2f|+%.2f)", horiz, g_TakeoffHorizontalSpeed[id], gain)
+            formatex(speed_text, charsmax(speed_text), "%.2f^n(%.2f|+%.2f)", horiz, displayTakeoffSpeed, gain)
         else
-            formatex(speed_text, charsmax(speed_text), "%.2f^n(%.2f|%.2f)", horiz, g_TakeoffHorizontalSpeed[id], gain)
+            formatex(speed_text, charsmax(speed_text), "%.2f^n(%.2f|%.2f)", horiz, displayTakeoffSpeed, gain)
     }
     else
     {
