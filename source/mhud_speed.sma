@@ -3,7 +3,7 @@
 #include <hamsandwich>
 
 #define PLUGIN_NAME "MHUD Speed"
-#define PLUGIN_VERSION "1.0.1"
+#define PLUGIN_VERSION "1.0.2"
 #define PLUGIN_AUTHOR "7yPh00N"
 
 new const MENU_SPEED[] = "SpeedMenu"
@@ -18,6 +18,7 @@ new Float:g_PrevHorizontalSpeed[33]
 new Float:g_TakeoffHorizontalSpeed[33]
 new Float:g_TakeoffZ[33]
 new Float:g_TakeoffWeaponSpeed[33]
+new bool:g_IsJumpTakeoff[33]
 new bool:g_InPrediction[33]
 new bool:g_JumpFirstFrame[33]
 
@@ -109,13 +110,22 @@ public client_PreThink(id)
     new oldbuttons = pev(id, pev_oldbuttons)
     new onground = pev(id, pev_flags) & FL_ONGROUND
     
-    if (((buttons & IN_JUMP && !(oldbuttons & IN_JUMP)) || (buttons & IN_DUCK && !(oldbuttons & IN_DUCK))) && onground)
+    if ((buttons & IN_JUMP && !(oldbuttons & IN_JUMP)) && onground)
     {
         new Float:weaponSpeed
         pev(id, pev_maxspeed, weaponSpeed)
         g_TakeoffHorizontalSpeed[id] = horiz
         g_TakeoffZ[id] = origin[2]
         g_TakeoffWeaponSpeed[id] = weaponSpeed
+        g_IsJumpTakeoff[id] = true
+        g_InPrediction[id] = true
+        g_JumpFirstFrame[id] = true
+    }
+    else if ((buttons & IN_DUCK && !(oldbuttons & IN_DUCK)) && onground)
+    {
+        g_TakeoffHorizontalSpeed[id] = horiz
+        g_TakeoffZ[id] = origin[2]
+        g_IsJumpTakeoff[id] = false
         g_InPrediction[id] = true
         g_JumpFirstFrame[id] = true
     }
@@ -158,11 +168,15 @@ public client_PreThink(id)
     if (g_InPrediction[id] && !g_JumpFirstFrame[id] && !shouldHideParen)
     {
         new Float:displayTakeoffSpeed = g_TakeoffHorizontalSpeed[id]
-        new Float:threshold = floatsqroot((g_TakeoffWeaponSpeed[id] * 1.2) * (g_TakeoffWeaponSpeed[id] * 1.2) - 4.0 * 4.0)
         
-        if (g_TakeoffHorizontalSpeed[id] > threshold)
+        if (g_IsJumpTakeoff[id])
         {
-            displayTakeoffSpeed = threshold * 0.8
+            new Float:threshold = floatsqroot((g_TakeoffWeaponSpeed[id] * 1.2) * (g_TakeoffWeaponSpeed[id] * 1.2) - 4.0 * 4.0)
+            
+            if (g_TakeoffHorizontalSpeed[id] > threshold)
+            {
+                displayTakeoffSpeed = threshold * 0.8
+            }
         }
         
         new Float:gain = horiz - displayTakeoffSpeed
